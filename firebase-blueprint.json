@@ -1,0 +1,150 @@
+{
+  "entities": {
+    "consultation": {
+      "title": "Consultation Request",
+      "description": "Information provided by potential clients seeking medical consultation.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "service": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "region": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "service", "email", "phone", "region", "createdAt"]
+    },
+    "tender": {
+      "title": "Service Tender",
+      "description": "An open auction for medical services.",
+      "type": "object",
+      "properties": {
+        "service": { "type": "string" },
+        "category": { "type": "string" },
+        "region": { "type": "string" },
+        "budget": { "type": "string" },
+        "deadline": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "patientId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "bid": {
+      "title": "Vendor Bid",
+      "description": "A response to a tender by a medical provider.",
+      "type": "object",
+      "properties": {
+        "tenderId": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "vendorName": { "type": "string" },
+        "price": { "type": "number" },
+        "margin": { "type": "number" },
+        "surgeon": { "type": "string" },
+        "inclusions": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "user": {
+      "title": "User Profile",
+      "description": "Stored user preferences and role-based access data.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "vendor", "patient"] },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "message": {
+      "title": "Chat Message",
+      "description": "A secure communication between bridge nodes.",
+      "type": "object",
+      "properties": {
+        "sender": { "type": "string" },
+        "text": { "type": "string" },
+        "time": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "support_ticket": {
+      "title": "Support Ticket",
+      "description": "A vendor-raised concern or support request.",
+      "type": "object",
+      "properties": {
+        "vendorId": { "type": "string" },
+        "vendorName": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "resolved", "pending"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      }
+    }
+    "inquiry_message": {
+      "title": "Inquiry Message",
+      "description": "Secure message within an inquiry dossier.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "sender": { "type": "string", "enum": ["vendor", "admin"] },
+        "senderName": { "type": "string" },
+        "time": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "inquiry_document": {
+      "title": "Inquiry Document",
+      "description": "Document shared within an inquiry dossier.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string" },
+        "size": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/leads/{leadId}/messages/{messageId}": {
+      "schema": "inquiry_message",
+      "description": "Messages for a specific inquiry."
+    },
+    "/leads/{leadId}/documents/{docId}": {
+      "schema": "inquiry_document",
+      "description": "Documents for a specific inquiry."
+    },
+    "/consultations/{consultationId}": {
+      "schema": "consultation",
+      "description": "Collection of consultation requests."
+    },
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "Global user registry and roles."
+    },
+    "/tenders/{tenderId}": {
+      "schema": "tender",
+      "description": "Global auctions list."
+    },
+    "/bids/{bidId}": {
+      "schema": "bid",
+      "description": "Collection of vendor bids."
+    },
+    "/tenders/{tenderId}/chats/{chatId}/messages/{messageId}": {
+      "schema": "message",
+      "description": "Secure relay messages."
+    },
+    "/support_tickets/{ticketId}": {
+      "schema": "support_ticket",
+      "description": "Vendor support tickets."
+    },
+    "/support_tickets/{ticketId}/messages/{messageId}": {
+      "schema": "message",
+      "description": "Support ticket conversation."
+    }
+  }
+}
