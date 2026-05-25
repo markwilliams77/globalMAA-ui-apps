@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Filter, MapPin, Activity, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
-import { VENDORS, SERVICES, REGIONS } from '../constants';
+import { Search, Activity, SlidersHorizontal, X, Loader2 } from 'lucide-react';
+import { SERVICES, REGIONS } from '../constants';
+import type { VendorListItem } from '../models';
+import { getDirectoryVendors } from '../utils/vendors';
 import VendorCard from './VendorCard';
 
 interface RegistryPageProps {
@@ -15,16 +17,59 @@ export default function RegistryPage({ initialCategory = null, initialRegion = n
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(initialRegion);
   const [showFilters, setShowFilters] = useState(false);
+  const [vendors, setVendors] = useState<VendorListItem[]>([]);
+  const [totalEntries, setTotalEntries] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const hasActiveFilters = Boolean(searchQuery.trim() || selectedCategory || (selectedRegion && selectedRegion !== 'Global'));
 
-  const filteredVendors = useMemo(() => {
-    return VENDORS.filter(vendor => {
-      const matchesSearch = vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          vendor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = !selectedCategory || vendor.category === selectedCategory;
-      const matchesRegion = !selectedRegion || selectedRegion === 'Global' || vendor.location === selectedRegion;
-      
-      return matchesSearch && matchesCategory && matchesRegion;
-    });
+  useEffect(() => {
+    setSelectedCategory(initialCategory);
+  }, [initialCategory]);
+
+  useEffect(() => {
+    setSelectedRegion(initialRegion);
+  }, [initialRegion]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    setIsLoading(true);
+    setApiError(null);
+
+    const timeoutId = window.setTimeout(() => {
+      getDirectoryVendors(
+        {
+          search: searchQuery.trim(),
+          category: selectedCategory,
+          region: selectedRegion,
+          page: 1,
+          limit: 50,
+        },
+        controller.signal,
+      )
+        .then((response) => {
+          setVendors(response.data);
+          setTotalEntries(response.pagination.total);
+        })
+        .catch(() => {
+          if (controller.signal.aborted) return;
+
+          setVendors([]);
+          setTotalEntries(0);
+          setApiError('Unable to load the live registry right now.');
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setIsLoading(false);
+          }
+        });
+    }, 250);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
   }, [searchQuery, selectedCategory, selectedRegion]);
 
   return (
@@ -145,7 +190,7 @@ export default function RegistryPage({ initialCategory = null, initialRegion = n
         {/* Results Info */}
         <div className="flex justify-between items-center mb-8 pb-4 border-b border-navy/5">
           <span className="text-[10px] font-bold text-navy/40 uppercase tracking-[0.4em]">
-            Showing {filteredVendors.length} Registry Entries
+            {isLoading ? 'Loading' : `Showing ${totalEntries}`} Registry Entries
           </span>
           { (selectedCategory || selectedRegion || searchQuery) && (
             <div className="flex gap-2">
@@ -164,11 +209,21 @@ export default function RegistryPage({ initialCategory = null, initialRegion = n
             </div>
           )}
         </div>
+        {apiError && (
+          <div className="mb-6 rounded-2xl border border-brand-red/10 bg-brand-red/5 px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-brand-red">
+            {apiError}
+          </div>
+        )}
 
         {/* Grid Layout */}
-        {filteredVendors.length > 0 ? (
+        {isLoading && vendors.length === 0 ? (
+          <div className="py-40 text-center">
+            <Loader2 className="w-10 h-10 mx-auto text-navy animate-spin mb-6" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-navy/40">Loading Registry</p>
+          </div>
+        ) : vendors.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 border-l border-t border-navy/5">
-            {filteredVendors.map((v) => (
+            {vendors.map((v) => (
               <VendorCard 
                 key={v.id} 
                 id={v.id}
@@ -187,13 +242,17 @@ export default function RegistryPage({ initialCategory = null, initialRegion = n
         ) : (
           <div className="py-40 text-center">
              <Activity className="mx-auto text-navy/10 mb-8" size={64} />
-             <h3 className="text-3xl font-light text-navy/30 tracking-tight">No vendors found matching your criteria.</h3>
-             <button 
-               onClick={() => { setSelectedCategory(null); setSelectedRegion(null); setSearchQuery(''); }}
-               className="mt-8 text-cyan font-bold uppercase tracking-widest text-xs"
-             >
-               Clear filters & search
-             </button>
+             <h3 className="text-3xl font-light text-navy/30 tracking-tight">
+               {apiError ?? (hasActiveFilters ? 'No vendors found matching your criteria.' : 'No approved vendors are available yet.')}
+             </h3>
+             {hasActiveFilters && (
+               <button 
+                 onClick={() => { setSelectedCategory(null); setSelectedRegion(null); setSearchQuery(''); }}
+                 className="mt-8 text-cyan font-bold uppercase tracking-widest text-xs"
+               >
+                 Clear filters & search
+               </button>
+             )}
           </div>
         )}
       </div>

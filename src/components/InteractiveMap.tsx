@@ -199,7 +199,7 @@ export default function InteractiveMap({ onVisitRegistry }: InteractiveMapProps)
                          onClick={() => setActiveRegion(null)}
                          className="md:hidden p-2 text-navy/20 hover:text-navy"
                        >
-                         <svg size={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-4 w-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-4 w-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                        </button>
                        <div className="hidden md:flex w-12 h-12 rounded-2xl bg-cyan/5 items-center justify-center">
                           <MapPin size={24} className="text-cyan" />

@@ -52,8 +52,9 @@ export default function VendorPortal({ onLogin, onPartnerWithUs }: VendorPortalP
                >
                  Join the Global Network
                </button>
-               <button className="px-12 py-6 border border-navy/10 rounded-full text-xs font-bold uppercase tracking-widest text-navy hover:bg-navy/5 transition-all">
-                  Explore Opportunities
+               <button onClick={onLogin} className="px-12 py-6 border border-navy/10 rounded-full text-xs font-bold uppercase tracking-widest text-navy hover:bg-navy/5 transition-all inline-flex items-center gap-3">
+                  <LogIn size={16} />
+                  Vendor Login
                </button>
             </div>
           </div>
@@ -194,8 +195,9 @@ export default function VendorPortal({ onLogin, onPartnerWithUs }: VendorPortalP
                <button onClick={onPartnerWithUs} className="px-16 py-7 bg-white text-navy rounded-full font-bold text-[10px] uppercase tracking-[0.3em] hover:bg-brand-red hover:text-white transition-all shadow-2xl active:scale-95">
                   Join GMAA Now
                </button>
-               <button className="px-16 py-7 border border-white/20 rounded-full font-bold text-[10px] uppercase tracking-[0.3em] text-white hover:bg-white hover:text-navy transition-all active:scale-95">
-                  Consultation Call
+               <button onClick={onLogin} className="px-16 py-7 border border-white/20 rounded-full font-bold text-[10px] uppercase tracking-[0.3em] text-white hover:bg-white hover:text-navy transition-all active:scale-95 inline-flex items-center gap-3">
+                  <LogIn size={16} />
+                  Vendor Login
                </button>
             </div>
          </div>

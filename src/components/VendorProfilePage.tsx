@@ -13,9 +13,11 @@ import {
   Stethoscope,
   BriefcaseMedical,
   MessageSquare,
-  Share2
+  Share2,
+  Loader2
 } from 'lucide-react';
-import { VENDORS } from '../constants';
+import type { VendorDetails } from '../models';
+import { getVendorDetails } from '../utils/vendors';
 import ChatOverlay from './ChatOverlay';
 
 interface VendorProfilePageProps {
@@ -25,13 +27,57 @@ interface VendorProfilePageProps {
 
 export default function VendorProfilePage({ vendorId, onBack }: VendorProfilePageProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const vendor = VENDORS.find(v => v.id === vendorId);
+  const [vendor, setVendor] = useState<VendorDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+
+    setIsLoading(true);
+    setApiError(null);
+    setVendor(null);
+
+    getVendorDetails(vendorId, controller.signal)
+      .then((response) => {
+        setVendor(response);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+
+        setVendor(null);
+        setApiError('Unable to load this vendor profile right now.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [vendorId]);
+
+  if (isLoading && !vendor) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 mx-auto text-navy animate-spin mb-6" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-navy/40">Loading Vendor Profile</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!vendor) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <h2 className="text-4xl font-light text-navy mb-4">Vendor not found</h2>
+          {apiError && (
+            <p className="text-sm text-navy/40 font-medium mb-6">{apiError}</p>
+          )}
           <button onClick={onBack} className="text-brand-red font-bold uppercase tracking-widest text-sm">Return to Registry</button>
         </div>
       </div>

@@ -248,7 +248,7 @@ const KanbanCard = ({ inquiry }: { inquiry: Inquiry; key?: string }) => (
     layout
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    whileHover={{ y: -4, shadow: "0 20px 25px -5px rgb(0 0 0 / 0.1)" }}
+    whileHover={{ y: -4, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1)" }}
     className="bg-navy dark:bg-slate-800 p-6 rounded-3xl border border-white/10 shadow-lg cursor-pointer transition-all group overflow-hidden relative"
   >
     <div className="absolute top-0 right-0 p-4">
@@ -1245,9 +1245,9 @@ export default function ProviderDashboard({
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="fixed inset-0 z-[100] bg-navy/60 backdrop-blur-xl flex items-center justify-center p-4 lg:p-12"
+        className="fixed inset-0 z-[100] bg-navy/60 backdrop-blur-xl flex items-center justify-center p-3 sm:p-4 lg:p-12"
       >
-        <div className="bg-white dark:bg-slate-900 w-full max-w-7xl h-full rounded-2xl md:rounded-[48px] overflow-hidden shadow-2xl flex flex-col border border-white/10">
+        <div className="bg-white dark:bg-slate-900 w-full max-w-7xl h-[calc(100dvh-1.5rem)] lg:h-full rounded-2xl md:rounded-[48px] overflow-hidden shadow-2xl flex flex-col border border-white/10">
           {/* Header */}
           <div className="bg-[#051622] p-4 md:p-8 text-white flex justify-between items-center shrink-0">
             <div className="flex items-center gap-4 md:gap-6">
@@ -1903,7 +1903,7 @@ export default function ProviderDashboard({
         <AnimatePresence>
           {selectedInquiry && renderInquiryDossier()}
           {selectedTender && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -1915,7 +1915,7 @@ export default function ProviderDashboard({
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="bg-white w-full max-w-4xl rounded-[48px] shadow-2xl relative overflow-hidden flex flex-col h-[90vh]"
+                className="bg-white w-full max-w-4xl rounded-[28px] md:rounded-[48px] shadow-2xl relative overflow-hidden flex flex-col h-[calc(100dvh-1.5rem)] sm:h-[90vh]"
               >
                 <div className="p-10 bg-white border-b border-navy/5 flex justify-between items-center shrink-0">
                   <div className="flex items-center gap-6">
@@ -2133,7 +2133,7 @@ export default function ProviderDashboard({
         {/* Shield Proxy Chat Bridge */}
         <AnimatePresence>
           {isShieldOpen && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
               <div
                 onClick={() => setIsShieldOpen(false)}
                 className="absolute inset-0 bg-navy/60 backdrop-blur-md"
@@ -2142,7 +2142,7 @@ export default function ProviderDashboard({
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[48px] overflow-hidden relative shadow-2xl flex flex-col h-[70vh]"
+                className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[28px] md:rounded-[48px] overflow-hidden relative shadow-2xl flex flex-col h-[calc(100dvh-1.5rem)] sm:h-[70vh]"
               >
                 <div className="p-8 bg-[#051622] text-white flex justify-between items-center shrink-0">
                   <div className="flex items-center gap-4">
@@ -2217,7 +2217,7 @@ export default function ProviderDashboard({
                         }
                       />
                       <button
-                        onClick={handleSendMessage}
+                        onClick={() => handleSendMessage()}
                         className="bg-navy dark:bg-cyan text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-navy/20 active:scale-95 transition-all"
                       >
                         Relay intel
@@ -2243,7 +2243,7 @@ const InquiryDetailModal = ({
 }) => {
   if (!inquiry) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -2254,7 +2254,7 @@ const InquiryDetailModal = ({
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl relative overflow-hidden flex flex-col"
+        className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] rounded-3xl shadow-2xl relative overflow-y-auto flex flex-col"
       >
         <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start">
           <div className="flex gap-4">

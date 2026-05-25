@@ -70,7 +70,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#F3F4F6] flex items-center justify-center overflow-y-auto pt-20 pb-20 px-4">
+    <div className="fixed inset-0 z-[100] bg-[#F3F4F6] flex items-start lg:items-center justify-center overflow-y-auto p-3 sm:p-6 lg:p-10">
       {/* Background Decor */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -80,11 +80,11 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
       <motion.div 
         initial={{ opacity: 0, y: 40, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        className="w-full max-w-5xl bg-white rounded-[40px] shadow-2xl border border-navy/5 relative overflow-hidden"
+        className="w-full max-w-5xl max-h-none lg:max-h-[calc(100dvh-5rem)] bg-white rounded-[28px] sm:rounded-[40px] shadow-2xl border border-navy/5 relative overflow-hidden lg:overflow-y-auto"
       >
-        <div className="grid lg:grid-cols-12 min-h-[700px]">
+        <div className="grid lg:grid-cols-12 min-h-0 lg:min-h-[700px]">
           {/* Left: Progress Sidebar */}
-          <div className="lg:col-span-4 bg-[#0A2647] p-12 text-white relative flex flex-col justify-between">
+          <div className="lg:col-span-4 bg-[#0A2647] p-6 sm:p-8 lg:p-12 text-white relative flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-3 mb-12">
                 <div className="w-8 h-8 bg-brand-red rounded-lg flex items-center justify-center font-bold text-white uppercase">M</div>
@@ -93,10 +93,10 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
               <h2 className="text-3xl font-black uppercase tracking-tighter mb-4 leading-tight">Institutional<br/>Registration</h2>
               <p className="text-white/40 text-[9px] font-bold leading-relaxed mb-12 uppercase tracking-widest">Phase 01: Secure Entry Pipeline</p>
 
-              <div className="space-y-8">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-1 gap-4 lg:gap-8">
                 {STEPS.map((step) => (
                   <div key={step.id} className="flex gap-4 group">
-                    <div className="flex flex-col items-center">
+                    <div className="hidden lg:flex flex-col items-center">
                       <div className={cn(
                         "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500",
                         currentStep === step.id ? "bg-cyan shadow-lg shadow-cyan/40 scale-110" : 
@@ -111,19 +111,28 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                         )} />
                       )}
                     </div>
-                    <div className="pt-1">
+                    <div className="pt-1 flex items-start gap-3 lg:block">
+                      <div className={cn(
+                        "lg:hidden w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 shrink-0",
+                        currentStep === step.id ? "bg-cyan shadow-lg shadow-cyan/40 scale-110" :
+                        currentStep > step.id ? "bg-emerald-500" : "bg-white/10"
+                      )}>
+                        {currentStep > step.id ? <Check size={16} /> : <step.icon size={16} />}
+                      </div>
+                      <div>
                       <h4 className={cn(
                         "text-[10px] font-black uppercase tracking-widest transition-colors",
                         currentStep === step.id ? "text-white" : "text-white/40"
                       )}>{step.title}</h4>
                       <p className="text-[10px] text-white/20 mt-1">{step.description}</p>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="pt-12">
+            <div className="hidden lg:block pt-12">
                <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
                  <p className="text-[10px] font-black uppercase tracking-widest text-cyan mb-2 flex items-center gap-2">
                    <ShieldCheck size={12} fill="currentColor" /> GMAA Verification
@@ -134,10 +143,10 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
           </div>
 
           {/* Right: Form Content */}
-          <div className="lg:col-span-8 p-12 lg:p-20 relative flex flex-col">
+          <div className="lg:col-span-8 p-6 sm:p-8 lg:p-16 xl:p-20 relative flex flex-col">
             <button 
               onClick={onCancel}
-              className="absolute top-8 right-8 text-navy/20 hover:text-brand-red transition-colors uppercase text-[10px] font-black tracking-widest"
+              className="absolute top-5 right-5 lg:top-8 lg:right-8 text-navy/20 hover:text-brand-red transition-colors uppercase text-[10px] font-black tracking-widest z-10"
             >
               Exit
             </button>
@@ -149,7 +158,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="space-y-12"
+                  className="space-y-8 lg:space-y-12"
                 >
                   {/* Step Header */}
                   <div>
@@ -159,7 +168,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
 
                   {/* Step 1: Basic Details */}
                   {currentStep === 1 && (
-                    <div className="grid grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 lg:gap-8">
                        <div className="col-span-2 space-y-2">
                          <label className="text-[10px] font-black uppercase text-navy/40 tracking-widest px-1">Organisation Name</label>
                          <input 
@@ -224,11 +233,12 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                     <div className="space-y-10">
                       <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase text-navy/40 tracking-widest px-1">Organisation Type</label>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
                           {['Hospital', 'Diagnostic Center', 'Specialty Clinic'].map((type) => (
                             <button
                               key={type}
                               onClick={() => setFormData({...formData, orgType: type})}
+                              type="button"
                               className={cn(
                                 "py-4 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
                                 formData.orgType === type ? "border-cyan bg-cyan/5 text-cyan" : "border-slate-100 text-navy/20 hover:border-navy/10"
@@ -242,7 +252,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
 
                       <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase text-navy/40 tracking-widest px-1">Medical Specializations</label>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {[
                             'Cardiothoracic', 'Oncology Care', 'Advanced Ortho', 
                             'Neurological', 'Dental Cosmetic', 'IVF & Reproductive',
@@ -251,6 +261,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                             <button
                               key={item}
                               onClick={() => toggleSpecialty(item)}
+                              type="button"
                               className={cn(
                                 "p-5 rounded-2xl border-2 text-left transition-all flex items-center justify-between",
                                 formData.specialties.includes(item) 
@@ -283,7 +294,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                             { label: 'MOH Accreditation Certificate', icon: ShieldCheck },
                             { label: 'Tax Identification Document', icon: FileCheck }
                           ].map((doc, idx) => (
-                            <div key={idx} className="p-8 border-2 border-dashed border-slate-100 rounded-3xl flex items-center justify-between bg-slate-50/50 group hover:border-cyan/30 transition-all">
+                            <div key={idx} className="p-5 lg:p-8 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 bg-slate-50/50 group hover:border-cyan/30 transition-all">
                                <div className="flex items-center gap-6">
                                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-navy shadow-lg group-hover:bg-cyan group-hover:text-white transition-all">
                                    <doc.icon size={20} />
@@ -303,11 +314,12 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                   {/* Step 4: Payment */}
                   {currentStep === 4 && (
                     <div className="space-y-8">
-                      <div className="grid grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
                         {plans.map((p) => (
                           <button
                             key={p.name}
                             onClick={() => setFormData({...formData, plan: p.name as any})}
+                            type="button"
                             className={cn(
                               "relative p-8 rounded-[32px] border-2 text-left transition-all h-full flex flex-col",
                               formData.plan === p.name 
@@ -338,7 +350,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                         ))}
                       </div>
                       
-                      <div className="bg-navy rounded-3xl p-8 text-white flex items-center justify-between">
+                      <div className="bg-navy rounded-3xl p-6 lg:p-8 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-5">
                          <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-1">Secured Checkout via Stripe</p>
                             <h4 className="text-lg font-black uppercase tracking-tighter">GMAA Institutional Enrollment</h4>
@@ -415,7 +427,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
             </div>
 
             {/* Actions */}
-            <div className="mt-16 flex items-center justify-between pt-12 border-t border-slate-100">
+            <div className="mt-8 lg:mt-16 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6 lg:pt-12 border-t border-slate-100">
                {currentStep < 5 ? (
                  <>
                    <button 
@@ -431,7 +443,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
 
                    <button 
                      onClick={nextStep}
-                     className="bg-navy text-white px-12 py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-xs hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-navy/20 group"
+                     className="bg-navy text-white px-8 lg:px-12 py-5 rounded-2xl font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-xs hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-navy/20 group"
                    >
                      {currentStep === 4 ? 'Commit & Pay' : 'Next Step'} <ChevronRight className="inline-block ml-2 group-hover:translate-x-1 transition-transform" size={18} />
                    </button>

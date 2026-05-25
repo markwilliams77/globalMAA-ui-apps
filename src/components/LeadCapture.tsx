@@ -81,7 +81,7 @@ export default function LeadCapture({ externalOpen, onClose }: LeadCaptureProps)
       {/* Multi-step Form Modal */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-6 sm:p-12">
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-6 md:p-12 overflow-y-auto">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -94,19 +94,19 @@ export default function LeadCapture({ externalOpen, onClose }: LeadCaptureProps)
               initial={{ opacity: 0, scale: 0.95, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 40 }}
-              className="relative w-full max-w-2xl bg-white rounded-3xl md:rounded-[48px] overflow-hidden shadow-[0_50px_100px_rgba(10,17,31,0.5)] border border-white/10"
+              className="relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)] bg-white rounded-3xl md:rounded-[48px] overflow-y-auto shadow-[0_50px_100px_rgba(10,17,31,0.5)] border border-white/10"
             >
               {/* Noise Texture */}
               <div className="absolute inset-0 noise opacity-[0.03] pointer-events-none" />
 
               <button 
                 onClick={handleClose}
-                className="absolute top-6 right-6 md:top-10 md:right-10 p-2 md:p-3 rounded-full hover:bg-navy/5 text-navy group transition-all z-20"
+                className="absolute top-4 right-4 md:top-8 md:right-8 p-2 md:p-3 rounded-full hover:bg-navy/5 text-navy group transition-all z-20"
               >
                 <X size={20} className="md:size-6 group-hover:rotate-90 transition-transform" />
               </button>
 
-              <div className="p-8 md:p-20 relative z-10">
+              <div className="p-6 pt-14 sm:p-8 sm:pt-16 md:p-16 lg:p-20 relative z-10">
                 {isSubmitted ? (
                   <div className="py-10 md:py-20 text-center space-y-6 md:space-y-10">
                     <motion.div 
@@ -136,7 +136,7 @@ export default function LeadCapture({ externalOpen, onClose }: LeadCaptureProps)
                        </h3>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-8 md:space-y-12">
+                    <form onSubmit={handleSubmit} className="space-y-6 md:space-y-10">
                        <AnimatePresence mode="wait">
                          {step === 1 ? (
                            <motion.div
@@ -243,18 +243,18 @@ export default function LeadCapture({ externalOpen, onClose }: LeadCaptureProps)
                                 </div>
                               </div>
 
-                              <div className="flex gap-4">
+                              <div className="flex flex-col sm:flex-row gap-4">
                                 <button 
                                   type="button"
                                   onClick={() => setStep(1)}
-                                  className="flex-1 bg-slate-bg text-navy py-6 md:py-8 rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-widest hover:bg-navy/5 transition-colors"
+                                  className="flex-1 bg-slate-bg text-navy py-5 md:py-6 rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-widest hover:bg-navy/5 transition-colors"
                                 >
                                   Previous
                                 </button>
                                 <button 
                                   type="submit"
                                   disabled={loading || !formData.email || !formData.phone}
-                                  className="group relative overflow-hidden flex-[2] bg-brand-red text-white py-6 md:py-8 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all disabled:opacity-50"
+                                  className="group relative overflow-hidden flex-[2] bg-brand-red text-white py-5 md:py-6 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] shadow-2xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <div className="absolute inset-0 bg-navy -translate-y-full group-hover:translate-y-0 transition-transform duration-700" />
                                   <span className="relative z-10 flex items-center justify-center gap-4 text-[10px] md:text-xs">
@@ -282,4 +282,3 @@ export default function LeadCapture({ externalOpen, onClose }: LeadCaptureProps)
     </>
   );
 }
-

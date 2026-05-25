@@ -22,12 +22,14 @@ import VendorProfilePage from './components/VendorProfilePage';
 import DestinationsPage from './components/DestinationsPage';
 import DestinationDetailPage from './components/DestinationDetailPage';
 import LoginPage from './components/LoginPage';
+import VendorLoginPage from './components/VendorLoginPage';
 import ProviderDashboard from './components/ProviderDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import VendorOnboarding from './components/VendorOnboarding';
 import { useAuth } from './components/AuthContext';
 import { auth } from './lib/firebase';
-import { VENDORS } from './constants';
+import type { VendorListItem } from './models';
+import { getDirectoryVendors } from './utils/vendors';
 import { Activity, Heart, Shield, Globe, Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -39,13 +41,18 @@ export default function App() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [isConsultationOpen, setIsConsultationOpen] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginAudience, setLoginAudience] = useState<'patient' | 'vendor'>('patient');
   const [isOnboarding, setIsOnboarding] = useState(false);
+  const [featuredVendors, setFeaturedVendors] = useState<VendorListItem[]>([]);
+  const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
   const { user, loading, profile, setSimulationUser } = useAuth();
   
   // Internal Role Mapping
   const isAdminEmployee = (profile?.role === 'admin' || 
                           user?.email === 'digitalised17@gmail.com' ||
                           (user?.email === 'admin@globalmaa.com')) && profile?.role !== 'vendor';
+  const isVendorUser = profile?.role === 'vendor';
 
   // Smooth scroll behavior
   useEffect(() => {
@@ -57,6 +64,33 @@ export default function App() {
     }
   }, [view]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    setIsFeaturedLoading(true);
+    setFeaturedError(null);
+
+    getDirectoryVendors({ page: 1, limit: 4 }, controller.signal)
+      .then((response) => {
+        setFeaturedVendors(response.data);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setFeaturedVendors([]);
+          setFeaturedError('Unable to load featured partners right now.');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsFeaturedLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -65,17 +99,49 @@ export default function App() {
     );
   }
 
-  // Auth protection logic
-  const isProtectedRoute = view === 'vendors' || view === 'admin';
-  if ((isProtectedRoute || isLoggingIn) && !user) {
+  if (isLoggingIn && loginAudience === 'patient' && !user) {
     return (
       <LoginPage 
         onBack={() => {
           setIsLoggingIn(false);
-          if (view === 'vendors' || view === 'admin') setView('home');
+          setPortal('patient');
+          setView('home');
         }} 
         onLoginBypass={(u) => {
           setSimulationUser(u);
+          setPortal('patient');
+          setView('home');
+          setIsLoggingIn(false);
+        }}
+      />
+    );
+  }
+
+  if (isLoggingIn && loginAudience === 'vendor' && !isVendorUser) {
+    return (
+      <VendorLoginPage
+        onBack={() => {
+          setIsLoggingIn(false);
+          setPortal('vendor');
+          setView('home');
+        }}
+      />
+    );
+  }
+
+  const showPatientLogin = !user && view === 'vendors';
+
+  if (showPatientLogin) {
+    return (
+      <LoginPage
+        onBack={() => {
+          setPortal('patient');
+          setView('home');
+        }}
+        onLoginBypass={(u) => {
+          setSimulationUser(u);
+          setPortal('patient');
+          setView('home');
           setIsLoggingIn(false);
         }}
       />
@@ -100,6 +166,7 @@ export default function App() {
       setSimulationUser(null);
       setView('home');
       setIsLoggingIn(false);
+      setLoginAudience('patient');
       setPortal(currentPortal);
     } catch (err) {
       console.error("Logout failed:", err);
@@ -109,11 +176,21 @@ export default function App() {
   const handleSourceVendors = (service?: string, region?: string) => {
     if (service) setSelectedService(service);
     if (region) setSelectedRegion(region);
+    if (!user) {
+      setLoginAudience('patient');
+      setIsLoggingIn(true);
+      return;
+    }
     setView('vendors');
   };
 
   const handleViewChange = (newView: any) => {
     setSelectedVendorId(null);
+    if (newView === 'vendors' && !user) {
+      setLoginAudience('patient');
+      setIsLoggingIn(true);
+      return;
+    }
     setView(newView);
   };
 
@@ -130,14 +207,18 @@ export default function App() {
       </div>
 
       {/* Global Navbar - Hidden during institutional/admin sessions to prevent UI collision */}
-      {!(effectiveView === 'admin' || (portal === 'vendor' && user) || (profile?.role === 'admin' && view === 'admin')) && (
+      {!(effectiveView === 'admin' || (portal === 'vendor' && isVendorUser) || (profile?.role === 'admin' && view === 'admin')) && (
         <Navbar 
           portal={portal} 
           onPortalChange={setPortal} 
           currentView={view} 
           onViewChange={handleViewChange} 
           onLogout={handleLogout} 
-          onLogin={() => setIsLoggingIn(true)} 
+          onLogin={() => {
+            setLoginAudience(portal === 'vendor' ? 'vendor' : 'patient');
+            setIsLoggingIn(true);
+          }} 
+          requireLogin
           isAdminView={false}
         />
       )}
@@ -149,7 +230,8 @@ export default function App() {
             onComplete={() => {
               setIsOnboarding(false);
               setPortal('vendor');
-              setIsLoggingIn(true); // Redirect to login after onboarding completion
+              setLoginAudience('vendor');
+              setIsLoggingIn(true); // Redirect to vendor login after onboarding completion
             }} 
           />
         )}
@@ -207,7 +289,7 @@ export default function App() {
                       </div>
                       <div className="flex gap-4">
                         <button 
-                          onClick={() => setView('vendors')}
+                          onClick={() => handleViewChange('vendors')}
                           className="px-8 py-4 rounded-full bg-navy text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-cyan shadow-2xl shadow-navy/10 transition-all active:scale-95"
                         >
                           View All 2.5k+
@@ -215,26 +297,45 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 border-l border-t border-navy/5">
-                      {VENDORS.map((v) => (
-                        <VendorCard 
-                          key={v.id} 
-                          id={v.id}
-                          name={v.name}
-                          location={v.location}
-                          category={v.category}
-                          image={v.image}
-                          accreditation={v.accreditation}
-                          startingPrice={v.startingPrice}
-                          specialty={v.specialty}
-                          rating={v.rating}
-                          onClick={(id) => {
-                            setSelectedVendorId(id);
-                            setView('vendors');
-                          }}
-                        />
-                      ))}
-                    </div>
+                    {isFeaturedLoading ? (
+                      <div className="py-24 border-y border-navy/5 flex flex-col items-center justify-center text-center">
+                        <Loader2 className="w-8 h-8 text-navy animate-spin mb-5" />
+                        <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-navy/40">Loading Featured Partners</p>
+                      </div>
+                    ) : featuredVendors.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 border-l border-t border-navy/5">
+                        {featuredVendors.map((v) => (
+                          <VendorCard 
+                            key={v.id} 
+                            id={v.id}
+                            name={v.name}
+                            location={v.location}
+                            category={v.category}
+                            image={v.image}
+                            accreditation={v.accreditation}
+                            startingPrice={v.startingPrice}
+                            specialty={v.specialty}
+                            rating={v.rating}
+                            onClick={(id) => {
+                              if (!user) {
+                                setLoginAudience('patient');
+                                setIsLoggingIn(true);
+                                return;
+                              }
+                              setSelectedVendorId(id);
+                              setView('vendors');
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-24 border-y border-navy/5 text-center">
+                        <Activity className="mx-auto text-navy/10 mb-6" size={48} />
+                        <h3 className="text-2xl font-light text-navy/30 tracking-tight">
+                          {featuredError ?? 'No approved partners are available yet.'}
+                        </h3>
+                      </div>
+                    )}
                   </div>
                 </section>
 
@@ -247,7 +348,7 @@ export default function App() {
                 />
                 <AIPoweredDiscovery />
                 
-                <InteractiveMap onVisitRegistry={() => setView('vendors')} />
+                <InteractiveMap onVisitRegistry={() => handleViewChange('vendors')} />
 
                 {/* CTA Final */}
                 <section className="py-48 relative overflow-hidden bg-navy text-white">
@@ -263,7 +364,14 @@ export default function App() {
                       </motion.h2>
                       <div className="flex flex-wrap justify-center gap-8">
                          <button 
-                           onClick={() => setIsConsultationOpen(true)}
+                           onClick={() => {
+                             if (!user) {
+                               setLoginAudience('patient');
+                               setIsLoggingIn(true);
+                               return;
+                             }
+                             setIsConsultationOpen(true);
+                           }}
                            className="px-16 py-7 bg-white text-navy rounded-full font-bold text-[10px] uppercase tracking-[0.3em] hover:bg-brand-red hover:text-white transition-all shadow-2xl shadow-white/5 active:scale-95"
                          >
                             Request Consultation
@@ -288,7 +396,7 @@ export default function App() {
               transition={{ duration: 0.5 }}
               className="flex-1 flex flex-col"
             >
-              {user ? (
+              {isVendorUser ? (
                 <ProviderDashboard 
                   onLogout={handleLogout} 
                   onViewProfile={(id) => {
@@ -303,7 +411,13 @@ export default function App() {
                 />
               ) : (
                 <>
-                  <VendorPortal onLogin={() => setIsLoggingIn(true)} onPartnerWithUs={() => setIsOnboarding(true)} />
+                  <VendorPortal
+                    onLogin={() => {
+                      setLoginAudience('vendor');
+                      setIsLoggingIn(true);
+                    }}
+                    onPartnerWithUs={() => setIsOnboarding(true)}
+                  />
                   <section className="py-24 md:py-32 bg-white">
                     <div className="container mx-auto px-4 md:px-12 lg:px-24">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-16">
@@ -390,7 +504,7 @@ export default function App() {
               onBack={() => setView('destinations')}
               onExploreProviders={(region) => {
                 setSelectedRegion(region);
-                setView('vendors');
+                handleViewChange('vendors');
               }}
             />
           </motion.main>
@@ -491,4 +605,3 @@ export default function App() {
     </div>
   );
 }
-
