@@ -38,7 +38,7 @@ export default function VendorCard({ id, name, location, category, image, accred
         </div>
 
         {/* Name & Location */}
-        <h3 className="text-3xl font-serif italic mb-2 text-navy group-hover:text-white transition-all duration-500 transform group-hover:translate-x-2 pr-2">
+        <h3 className="text-3xl font-headings mb-2 text-navy group-hover:text-white transition-all duration-500 transform group-hover:translate-x-2 pr-2">
             {name}
         </h3>
         <p className="text-[11px] font-medium text-navy/40 uppercase tracking-[0.1em] mb-4 group-hover:text-white/50 transition-colors">

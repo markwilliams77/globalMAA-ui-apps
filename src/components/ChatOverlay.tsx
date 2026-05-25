@@ -95,7 +95,7 @@ export default function ChatOverlay({ isOpen, onClose, context }: ChatOverlayPro
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          className="fixed bottom-8 right-8 w-[400px] h-[600px] bg-white rounded-[2.5rem] shadow-2xl shadow-navy/20 flex flex-col overflow-hidden z-[100] border border-navy/5"
+          className="fixed inset-x-3 bottom-3 top-auto h-[min(620px,calc(100dvh-1.5rem))] sm:inset-auto sm:bottom-8 sm:right-8 sm:w-[400px] sm:h-[600px] bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl shadow-navy/20 flex flex-col overflow-hidden z-[100] border border-navy/5"
         >
           {/* Header */}
           <div className="bg-navy p-6 flex items-center justify-between">
@@ -113,7 +113,7 @@ export default function ChatOverlay({ isOpen, onClose, context }: ChatOverlayPro
             </div>
             <button 
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+              className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors shrink-0"
             >
               <X className="text-white w-4 h-4" />
             </button>
@@ -161,12 +161,12 @@ export default function ChatOverlay({ isOpen, onClose, context }: ChatOverlayPro
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type your message..."
-                className="w-full bg-slate-bg rounded-2xl py-4 pl-6 pr-14 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-red/20 transition-all"
+                className="w-full bg-slate-bg rounded-2xl py-4 pl-5 pr-14 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-red/20 transition-all"
               />
               <button 
                 type="submit"
                 disabled={loading || !newMessage.trim()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-brand-red text-white rounded-xl flex items-center justify-center hover:bg-navy transition-colors disabled:opacity-50"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-brand-red text-white rounded-xl flex items-center justify-center hover:bg-navy transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
               </button>

@@ -5,16 +5,17 @@ import { useAuth } from './AuthContext';
 import { logout } from '../lib/firebase';
 
 interface NavbarProps {
-  portal: 'patient' | 'vendor';
+  portal: 'patient' | 'vendor' | 'admin';
   onPortalChange: (p: 'patient' | 'vendor') => void;
-  currentView: 'home' | 'about' | 'vendors' | 'insights' | 'admin' | 'directory';
-  onViewChange: (v: 'home' | 'about' | 'vendors' | 'insights' | 'admin' | 'directory') => void;
+  currentView: 'home' | 'about' | 'vendors' | 'insights' | 'admin' | 'directory' | 'destinations' | 'destination-detail';
+  onViewChange: (v: 'home' | 'about' | 'vendors' | 'insights' | 'admin' | 'directory' | 'destinations' | 'destination-detail') => void;
   onLogout?: () => void;
   onLogin?: () => void;
+  requireLogin?: boolean;
   isAdminView?: boolean;
 }
 
-export default function Navbar({ portal, onPortalChange, currentView, onViewChange, onLogout, onLogin, isAdminView }: NavbarProps) {
+export default function Navbar({ portal, onPortalChange, currentView, onViewChange, onLogout, onLogin, requireLogin = false, isAdminView }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { user } = useAuth();
@@ -150,7 +151,7 @@ export default function Navbar({ portal, onPortalChange, currentView, onViewChan
             <div className="flex items-center gap-3">
               <button 
                 onClick={() => {
-                  if (portal === 'vendor' && currentView === 'home' && !user) {
+                  if (requireLogin && portal === 'vendor' && currentView === 'home' && !user) {
                     onLogin?.();
                   } else {
                     onViewChange('vendors');
@@ -240,7 +241,7 @@ export default function Navbar({ portal, onPortalChange, currentView, onViewChan
           <a href="#" className="text-lg font-medium text-navy py-2 border-b border-navy/5">Medical Logistics</a>
           <button 
             onClick={() => { 
-                if (portal === 'vendor' && currentView === 'home' && !user) {
+                if (requireLogin && portal === 'vendor' && currentView === 'home' && !user) {
                   onLogin?.();
                 } else {
                   onViewChange('vendors');

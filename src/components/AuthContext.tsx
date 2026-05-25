@@ -13,11 +13,33 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const OTP_PATIENT_STORAGE_KEY = 'otp_patient_user';
+
+const getStoredOtpPatient = () => {
+  try {
+    const stored = localStorage.getItem(OTP_PATIENT_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, loading, error] = useAuthState(auth);
-  const [simulationUser, setSimulationUser] = React.useState<any | null>(null);
+  const [simulationUser, setSimulationUserState] = React.useState<any | null>(() => getStoredOtpPatient());
   const [profile, setProfile] = React.useState<any | null>(null);
+
+  const setSimulationUser = React.useCallback((nextUser: any) => {
+    setSimulationUserState(nextUser);
+
+    try {
+      if (nextUser?.isPatientOtpUser) {
+        localStorage.setItem(OTP_PATIENT_STORAGE_KEY, JSON.stringify(nextUser));
+      } else {
+        localStorage.removeItem(OTP_PATIENT_STORAGE_KEY);
+      }
+    } catch {}
+  }, []);
 
   const effectiveUser = React.useMemo(() => {
     if (!user && !simulationUser) return null;
@@ -44,6 +66,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const syncUser = async () => {
       if (effectiveUser) {
+        if ((effectiveUser as any).isPatientOtpUser) {
+          setProfile({
+            uid: effectiveUser.uid,
+            email: effectiveUser.email,
+            phone: (effectiveUser as any).phone,
+            displayName: effectiveUser.displayName || (effectiveUser as any).name || 'Patient',
+            role: 'guest',
+            createdAt: (effectiveUser as any).createdAt,
+          });
+          return;
+        }
+
         try {
           // In simulation mode, we might want to check the profile for the email typed in
           const emailForProfile = effectiveUser.email;

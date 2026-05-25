@@ -959,7 +959,7 @@ export default function AdminDashboard({
   const renderBidAnalysis = () => (
     <AnimatePresence>
       {selectedBid && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div
             onClick={() => setSelectedBid(null)}
             className="absolute inset-0 bg-navy/60 backdrop-blur-md"
@@ -968,9 +968,9 @@ export default function AdminDashboard({
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="bg-white w-full max-w-4xl rounded-[48px] overflow-hidden relative shadow-2xl flex flex-col"
+            className="bg-white w-full max-w-4xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] rounded-[28px] md:rounded-[48px] overflow-y-auto relative shadow-2xl flex flex-col"
           >
-            <div className="p-10 bg-slate-bg/50 flex justify-between items-start border-b border-navy/5">
+            <div className="p-5 md:p-10 bg-slate-bg/50 flex justify-between items-start gap-4 border-b border-navy/5">
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 bg-brand-red rounded-2xl flex items-center justify-center text-white shadow-xl shadow-brand-red/20">
                   <Activity size={32} />
@@ -992,7 +992,7 @@ export default function AdminDashboard({
               </button>
             </div>
 
-            <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="p-5 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
               <div className="space-y-8">
                 <div>
                   <h4 className="text-[10px] font-black text-navy/40 uppercase tracking-widest mb-4">
@@ -1913,9 +1913,9 @@ export default function AdminDashboard({
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="fixed inset-0 z-[100] bg-navy/60 backdrop-blur-xl flex items-center justify-center p-4 lg:p-12"
+        className="fixed inset-0 z-[100] bg-navy/60 backdrop-blur-xl flex items-center justify-center p-3 sm:p-4 lg:p-12"
       >
-        <div className="bg-white w-full max-w-7xl h-full rounded-2xl md:rounded-[48px] overflow-hidden shadow-2xl flex flex-col border border-navy/10">
+        <div className="bg-white w-full max-w-7xl h-[calc(100dvh-1.5rem)] lg:h-full rounded-2xl md:rounded-[48px] overflow-hidden shadow-2xl flex flex-col border border-navy/10">
           {/* Header */}
           <div className="bg-[#051622] p-4 md:p-8 text-white flex justify-between items-center shrink-0">
             <div className="flex items-center gap-6">
@@ -2445,7 +2445,7 @@ export default function AdminDashboard({
 
       {/* New Tender Modal Simulation */}
       {isNewTenderOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div
             onClick={() => setIsNewTenderOpen(false)}
             className="absolute inset-0 bg-navy/40 backdrop-blur-sm"
@@ -2453,7 +2453,7 @@ export default function AdminDashboard({
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white w-full max-w-xl rounded-[48px] p-12 relative shadow-2xl"
+            className="bg-white w-full max-w-xl max-h-[calc(100dvh-1.5rem)] rounded-[28px] md:rounded-[48px] p-6 md:p-12 relative shadow-2xl overflow-y-auto"
           >
             <h3 className="text-3xl font-bold text-navy uppercase tracking-tighter mb-8">
               Auction Configuration
