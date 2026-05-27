@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ShieldCheck, ChevronLeft, Mail, AlertCircle, Phone, User, KeyRound } from 'lucide-react';
 import { authApi } from '../utils/auth';
+import IndianPhoneInput from './IndianPhoneInput';
+import { buildIndianPhoneNumber, isValidIndianPhoneDigits } from '../utils/phone';
 
 interface LoginPageProps {
   onBack?: () => void;
@@ -26,6 +28,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack, onLoginBypass }) => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const normalizedPhone = buildIndianPhoneNumber(phone);
+  const phoneIsValid = isValidIndianPhoneDigits(phone);
 
   const getApiError = (err: any, fallback: string) => {
     return err?.response?.data?.error || err?.response?.data?.message || fallback;
@@ -41,7 +45,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack, onLoginBypass }) => {
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || (mode === 'signup' && (!name || !email))) return;
+    if (!phoneIsValid || (mode === 'signup' && (!name || !email))) return;
 
     setLoading(true);
     setError(null);
@@ -49,14 +53,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack, onLoginBypass }) => {
 
     try {
       const response = await authApi.sendOtp({
-        phone: phone.trim(),
+        phone: normalizedPhone,
         mode,
         name: mode === 'signup' ? name.trim() : undefined,
         email: mode === 'signup' ? email.trim().toLowerCase() : undefined,
       });
 
       setStep('otp');
-      setNotice(response.message || `OTP sent to ${phone.trim()}`);
+      setNotice(response.message || `OTP sent to ${normalizedPhone}`);
     } catch (err: any) {
       setError(getApiError(err, 'Could not send OTP. Please check the phone number and try again.'));
     } finally {
@@ -66,7 +70,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack, onLoginBypass }) => {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || !otp) return;
+    if (!phoneIsValid || !otp) return;
 
     setLoading(true);
     setError(null);
@@ -74,7 +78,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack, onLoginBypass }) => {
 
     try {
       const response = await authApi.verifyOtp({
-        phone: phone.trim(),
+        phone: normalizedPhone,
         code: otp.trim(),
       });
 
@@ -84,10 +88,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack, onLoginBypass }) => {
       }
 
       onLoginBypass?.({
-        uid: `patient-${phone.replace(/\D/g, '')}`,
+        uid: `patient-${normalizedPhone.replace(/\D/g, '')}`,
         email: email.trim().toLowerCase() || undefined,
         displayName: name.trim() || 'Patient',
-        phone: phone.trim(),
+        phone: normalizedPhone,
         role: 'guest',
         isSimulation: false,
         isPatientOtpUser: true,
@@ -191,16 +195,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack, onLoginBypass }) => {
             <label className="text-[10px] font-black uppercase tracking-widest text-navy/40 px-5">Phone Number</label>
             <div className="relative">
               <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-navy/20" size={16} />
-              <input
-                type="tel"
-                required
-                placeholder="+919999999999"
-                className="w-full bg-slate-bg border-none rounded-2xl py-4 pl-14 pr-6 text-xs font-bold focus:ring-2 focus:ring-navy/20 transition-all"
+              <IndianPhoneInput
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={setPhone}
                 disabled={step === 'otp'}
+                required
+                prefixClassName="ml-14 pr-3 py-4 text-[10px]"
+                inputClassName="min-w-0 flex-1 bg-transparent border-none rounded-r-2xl py-4 pl-3 pr-6 text-xs font-bold focus:ring-2 focus:ring-navy/20 transition-all disabled:opacity-60"
+                placeholder="10 digit number"
               />
+              <div className="absolute inset-0 -z-10 rounded-2xl bg-slate-bg" />
             </div>
+            {phone && !phoneIsValid && (
+              <p className="px-5 text-[9px] font-black uppercase tracking-widest text-brand-red">
+                Enter exactly 10 digits.
+              </p>
+            )}
           </div>
 
           {step === 'otp' && (
@@ -236,7 +246,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack, onLoginBypass }) => {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !phoneIsValid}
             className="w-full bg-navy text-white py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-brand-red transition-all active:scale-95 disabled:opacity-50"
           >
             {loading ? 'Please wait...' : step === 'details' ? 'Send OTP' : 'Verify OTP'}

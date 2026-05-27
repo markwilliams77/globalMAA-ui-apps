@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, ArrowRight, Send, CheckCircle2, Phone, Briefcase, MapPin } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import IndianPhoneInput from './IndianPhoneInput';
+import { buildIndianPhoneNumber, isValidIndianPhoneDigits } from '../utils/phone';
 
 interface LeadCaptureProps {
   externalOpen?: boolean;
@@ -24,6 +26,7 @@ export default function LeadCapture({ externalOpen, onClose }: LeadCaptureProps)
   });
 
   const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
+  const phoneIsValid = isValidIndianPhoneDigits(formData.phone);
 
   useEffect(() => {
     if (isOpen) {
@@ -46,6 +49,7 @@ export default function LeadCapture({ externalOpen, onClose }: LeadCaptureProps)
     try {
       await addDoc(collection(db, 'consultations'), {
         ...formData,
+        phone: buildIndianPhoneNumber(formData.phone),
         createdAt: serverTimestamp()
       });
       setIsSubmitted(true);
@@ -210,16 +214,21 @@ export default function LeadCapture({ externalOpen, onClose }: LeadCaptureProps)
                                 <div className="space-y-2 md:space-y-4 border-b border-navy/5 pb-2 md:pb-4">
                                   <label className="mixed-caps text-navy/30 uppercase text-[9px] md:text-[10px] font-bold">Secure Line</label>
                                   <div className="relative">
-                                    <input 
-                                      type="tel" 
+                                    <IndianPhoneInput
                                       value={formData.phone}
-                                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                      placeholder="+1 (xxx) xxx-xxxx" 
-                                      className="w-full bg-transparent text-lg md:text-xl font-serif italic text-navy placeholder:text-navy/10 focus:outline-none pr-10" 
-                                      required 
+                                      onChange={(value) => setFormData({...formData, phone: value})}
+                                      placeholder="10 digit number"
+                                      required
+                                      prefixClassName="pr-3 py-1 text-xs md:text-sm"
+                                      inputClassName="min-w-0 flex-1 bg-transparent text-lg md:text-xl font-serif italic text-navy placeholder:text-navy/10 focus:outline-none pr-10"
                                     />
                                     <Phone className="absolute right-0 top-1/2 -translate-y-1/2 text-navy/20 pointer-events-none" size={18} />
                                   </div>
+                                  {formData.phone && !phoneIsValid && (
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-red">
+                                      Enter exactly 10 digits.
+                                    </p>
+                                  )}
                                 </div>
                               </div>
 
@@ -253,7 +262,7 @@ export default function LeadCapture({ externalOpen, onClose }: LeadCaptureProps)
                                 </button>
                                 <button 
                                   type="submit"
-                                  disabled={loading || !formData.email || !formData.phone}
+                                  disabled={loading || !formData.email || !phoneIsValid}
                                   className="group relative overflow-hidden flex-[2] bg-brand-red text-white py-5 md:py-6 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] shadow-2xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <div className="absolute inset-0 bg-navy -translate-y-full group-hover:translate-y-0 transition-transform duration-700" />

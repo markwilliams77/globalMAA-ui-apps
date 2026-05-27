@@ -16,6 +16,8 @@ import {
   Activity
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import IndianPhoneInput from './IndianPhoneInput';
+import { isValidIndianPhoneDigits } from '../utils/phone';
 
 interface Step {
   id: number;
@@ -45,6 +47,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
     specialties: [] as string[],
     plan: 'Standard' as 'Standard' | 'Pro' | 'Premium',
   });
+  const contactNumberIsValid = isValidIndianPhoneDigits(formData.contactNumber);
 
   const nextStep = () => {
     if (currentStep === 4) {
@@ -204,13 +207,20 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                        </div>
                        <div className="space-y-2">
                          <label className="text-[10px] font-black uppercase text-navy/40 tracking-widest px-1">Contact Number</label>
-                         <input 
-                           type="text" 
-                           placeholder="+65 9123 4567"
-                           className="w-full bg-slate-100 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 focus:ring-cyan/50"
+                         <div className="rounded-2xl bg-slate-100">
+                           <IndianPhoneInput
                            value={formData.contactNumber}
-                           onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
+                           onChange={(value) => setFormData({...formData, contactNumber: value})}
+                           placeholder="10 digit number"
+                           prefixClassName="pl-5 pr-3 py-5 text-[10px]"
+                           inputClassName="min-w-0 flex-1 bg-transparent border-none rounded-r-2xl py-5 pl-3 pr-5 text-sm font-bold focus:ring-2 focus:ring-cyan/50"
                          />
+                         </div>
+                         {formData.contactNumber && !contactNumberIsValid && (
+                           <p className="px-1 text-[9px] font-black uppercase tracking-widest text-brand-red">
+                             Enter exactly 10 digits.
+                           </p>
+                         )}
                        </div>
                        <div className="col-span-2 space-y-2">
                          <label className="text-[10px] font-black uppercase text-navy/40 tracking-widest px-1">Concerned Person Name</label>
@@ -443,7 +453,8 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
 
                    <button 
                      onClick={nextStep}
-                     className="bg-navy text-white px-8 lg:px-12 py-5 rounded-2xl font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-xs hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-navy/20 group"
+                     disabled={currentStep === 1 && !contactNumberIsValid}
+                     className="bg-navy text-white px-8 lg:px-12 py-5 rounded-2xl font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-xs hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-navy/20 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                    >
                      {currentStep === 4 ? 'Commit & Pay' : 'Next Step'} <ChevronRight className="inline-block ml-2 group-hover:translate-x-1 transition-transform" size={18} />
                    </button>
