@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Building2, 
@@ -18,6 +18,13 @@ import {
 import { cn } from '../lib/utils';
 import IndianPhoneInput from './IndianPhoneInput';
 import { isValidIndianPhoneDigits } from '../utils/phone';
+import {
+  vendorOnboardingApi,
+  type VendorDocumentType,
+  type VendorOnboardingPayload,
+  type VendorOrgType,
+  type VendorPlan,
+} from '../utils/vendorOnboarding';
 
 interface Step {
   id: number;
@@ -35,25 +42,278 @@ const STEPS: Step[] = [
   { id: 6, title: 'Registry', description: 'Node activation', icon: Globe },
 ];
 
-export default function VendorOnboarding({ onComplete, onCancel }: { onComplete: () => void, onCancel: () => void }) {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    orgName: '',
-    address: '',
-    email: '',
-    contactPerson: '',
-    contactNumber: '',
-    orgType: 'Hospital',
-    specialties: [] as string[],
-    plan: 'Standard' as 'Standard' | 'Pro' | 'Premium',
-  });
-  const contactNumberIsValid = isValidIndianPhoneDigits(formData.contactNumber);
+const DOCUMENTS: Array<{ type: VendorDocumentType; label: string; icon: any }> = [
+  { type: 'business_license', label: 'Business License / Registration', icon: FileCheck },
+  { type: 'moh_accreditation', label: 'MOH Accreditation Certificate', icon: ShieldCheck },
+  { type: 'tax_identification', label: 'Tax Identification Document', icon: FileCheck },
+];
 
-  const nextStep = () => {
+const ONBOARDING_STORAGE_KEY = 'gmaa_vendor_onboarding';
+
+type UploadedDocumentState = Record<VendorDocumentType, { fileName: string; fileKey: string } | null>;
+
+interface SavedOnboardingState {
+  vendorId: string | null;
+  currentStep: number;
+  formData: VendorOnboardingPayload;
+  documents: UploadedDocumentState;
+  submitted: boolean;
+}
+
+const emptyDocuments: UploadedDocumentState = {
+  business_license: null,
+  moh_accreditation: null,
+  tax_identification: null,
+};
+
+const emptyFormData: VendorOnboardingPayload = {
+  orgName: '',
+  address: '',
+  email: '',
+  contactPerson: '',
+  contactNumber: '',
+  orgType: 'Hospital',
+  specialties: [],
+  plan: 'Standard',
+};
+
+const getSavedOnboarding = (): SavedOnboardingState | null => {
+  try {
+    const saved = window.localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    const parsed = saved ? JSON.parse(saved) as SavedOnboardingState : null;
+
+    if (parsed && !parsed.vendorId && parsed.currentStep > 1) {
+      window.localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const getRequestErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as { response?: { data?: { message?: string; error?: string } } }).response?.data;
+  return responseMessage?.message || responseMessage?.error || (error instanceof Error ? error.message : fallback);
+};
+
+const loadRazorpayCheckout = () => {
+  return new Promise<void>((resolve, reject) => {
+    if (window.Razorpay) {
+      resolve();
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Unable to load Razorpay checkout.')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Unable to load Razorpay checkout.'));
+    document.body.appendChild(script);
+  });
+};
+
+export default function VendorOnboarding({ onComplete, onCancel }: { onComplete: () => void, onCancel: () => void }) {
+  const savedOnboarding = getSavedOnboarding();
+  const [currentStep, setCurrentStep] = useState(savedOnboarding?.submitted ? 5 : savedOnboarding?.currentStep ?? 1);
+  const [vendorId, setVendorId] = useState<string | null>(savedOnboarding?.vendorId ?? null);
+  const [documents, setDocuments] = useState<UploadedDocumentState>(savedOnboarding?.documents ?? emptyDocuments);
+  const [applicationSubmitted, setApplicationSubmitted] = useState(savedOnboarding?.submitted ?? false);
+  const [uploadingDocument, setUploadingDocument] = useState<VendorDocumentType | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCheckingSavedDraft, setIsCheckingSavedDraft] = useState(Boolean(savedOnboarding?.vendorId));
+  const [errorMessage, setErrorMessage] = useState('');
+  const [formData, setFormData] = useState<VendorOnboardingPayload>(savedOnboarding?.formData ?? emptyFormData);
+  const contactNumberIsValid = isValidIndianPhoneDigits(formData.contactNumber);
+  const documentsComplete = DOCUMENTS.every((doc) => documents[doc.type]);
+  const identityComplete = Boolean(
+    formData.orgName.trim() &&
+    formData.address.trim() &&
+    formData.email.trim() &&
+    formData.contactPerson.trim() &&
+    contactNumberIsValid
+  );
+
+  const getPayload = (): VendorOnboardingPayload => ({
+    orgName: formData.orgName.trim(),
+    address: formData.address.trim(),
+    email: formData.email.trim(),
+    contactPerson: formData.contactPerson.trim(),
+    contactNumber: formData.contactNumber,
+    orgType: formData.orgType,
+    specialties: formData.specialties,
+    plan: formData.plan,
+  });
+
+  useEffect(() => {
+    const stateToSave: SavedOnboardingState = {
+      vendorId,
+      currentStep,
+      formData: getPayload(),
+      documents,
+      submitted: applicationSubmitted,
+    };
+
+    window.localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [applicationSubmitted, currentStep, documents, formData, vendorId]);
+
+  useEffect(() => {
+    if (!vendorId) {
+      setIsCheckingSavedDraft(false);
+      return;
+    }
+
+    vendorOnboardingApi.getStatus(vendorId)
+      .then((status) => {
+        const normalizedStatus = String(status.status || '').toUpperCase();
+        if (['UNDER_REVIEW', 'PENDING_ACTIVATION', 'ACTIVE'].includes(normalizedStatus)) {
+          setApplicationSubmitted(true);
+        }
+        setIsCheckingSavedDraft(false);
+      })
+      .catch(() => {
+        resetOnboardingState();
+        setIsCheckingSavedDraft(false);
+      });
+  }, []);
+
+  const ensureDraft = async () => {
+    if (vendorId) {
+      return vendorId;
+    }
+
+    const draft = await vendorOnboardingApi.createDraft(getPayload());
+    setVendorId(draft.id);
+    return draft.id;
+  };
+
+  const saveCurrentStep = async () => {
+    const existingVendorId = vendorId;
+    const id = await ensureDraft();
+
+    if (currentStep === 1 && existingVendorId) {
+      await vendorOnboardingApi.updateDraft(id, getPayload());
+    }
+
+    if (currentStep === 2 && existingVendorId) {
+      await vendorOnboardingApi.updateDraft(id, {
+        orgType: formData.orgType,
+        specialties: formData.specialties,
+      });
+    }
+
     if (currentStep === 4) {
-      setCurrentStep(5);
-    } else {
+      await vendorOnboardingApi.updateDraft(id, { plan: formData.plan });
+    }
+
+    return id;
+  };
+
+  const showError = (message: string) => {
+    setErrorMessage(message);
+  };
+
+  const resetOnboardingState = () => {
+    window.localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+    setVendorId(null);
+    setCurrentStep(1);
+    setFormData({ ...emptyFormData });
+    setDocuments({ ...emptyDocuments });
+    setApplicationSubmitted(false);
+    setErrorMessage('');
+  };
+
+  const startPayment = async () => {
+    const id = await saveCurrentStep();
+    await loadRazorpayCheckout();
+
+    if (!window.Razorpay) {
+      throw new Error('Razorpay checkout is unavailable.');
+    }
+
+    const order = await vendorOnboardingApi.createRazorpayOrder(id);
+    const Razorpay = window.Razorpay;
+
+    await new Promise<void>((resolve, reject) => {
+      const checkout = new Razorpay({
+        key: order.razorpayKeyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Global MAA',
+        description: `${formData.plan} vendor onboarding`,
+        order_id: order.orderId,
+        prefill: {
+          name: formData.contactPerson,
+          email: formData.email,
+          contact: formData.contactNumber,
+        },
+        theme: {
+          color: '#0A2647',
+        },
+        handler: async (response) => {
+          try {
+            await vendorOnboardingApi.verifyRazorpayPayment(id, response);
+            await vendorOnboardingApi.submit(id);
+            setApplicationSubmitted(true);
+            setCurrentStep(5);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        },
+        modal: {
+          ondismiss: () => reject(new Error('Payment was cancelled.')),
+        },
+      });
+
+      checkout.open();
+    });
+  };
+
+  const nextStep = async () => {
+    setErrorMessage('');
+
+    if (currentStep === 1 && !identityComplete) {
+      showError('Complete all identity fields before continuing.');
+      return;
+    }
+
+    if (currentStep === 2 && formData.specialties.length === 0) {
+      showError('Select at least one medical specialization before continuing.');
+      return;
+    }
+
+    if (currentStep === 3 && !documentsComplete) {
+      showError('Upload all required documents before continuing.');
+      return;
+    }
+
+    if (currentStep === 1 && !vendorId) {
+      setCurrentStep(2);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (currentStep === 4) {
+        await startPayment();
+        return;
+      }
+
+      await saveCurrentStep();
       setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
+    } catch (error) {
+      showError(getRequestErrorMessage(error, 'Unable to save onboarding details.'));
+    } finally {
+      setIsSaving(false);
     }
   };
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -67,10 +327,137 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
   };
 
   const plans = [
-    { name: 'Standard', price: '500', features: ['Basic Registry Listing', 'Email Support', '5 Tender Bids/Mo'] },
-    { name: 'Pro', price: '1500', features: ['Featured Listing', 'Priority Support', 'Unlimited Tender Bids', 'Analytics Dashboard'] },
-    { name: 'Premium', price: '2000', features: ['Global Homepage Feature', 'Dedicated Account Manager', 'Custom Procurement API', 'VIP Event Access'] }
+    { name: 'Standard' as VendorPlan, price: '1', features: ['Basic Registry Listing', 'Email Support', '5 Tender Bids/Mo'] },
+    { name: 'Pro' as VendorPlan, price: '2', features: ['Featured Listing', 'Priority Support', 'Unlimited Tender Bids', 'Analytics Dashboard'] },
+    { name: 'Premium' as VendorPlan, price: '3', features: ['Global Homepage Feature', 'Dedicated Account Manager', 'Custom Procurement API', 'VIP Event Access'] }
   ];
+
+  const handleDocumentUpload = async (documentType: VendorDocumentType, file?: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    setErrorMessage('');
+    setUploadingDocument(documentType);
+
+    try {
+      const id = await ensureDraft();
+      const uploadMeta = {
+        documentType,
+        fileName: file.name,
+        contentType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+      };
+      const presign = await vendorOnboardingApi.presignDocument(id, uploadMeta);
+
+      const uploadResponse = await fetch(presign.uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': uploadMeta.contentType,
+        },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Document upload failed. Please try again.');
+      }
+
+      await vendorOnboardingApi.completeDocument(id, {
+        ...uploadMeta,
+        fileKey: presign.fileKey,
+      });
+
+      setDocuments(prev => ({
+        ...prev,
+        [documentType]: {
+          fileName: file.name,
+          fileKey: presign.fileKey,
+        },
+      }));
+    } catch (error) {
+      showError(getRequestErrorMessage(error, 'Unable to upload document.'));
+    } finally {
+      setUploadingDocument(null);
+    }
+  };
+
+  const actionDisabled =
+    isSaving ||
+    Boolean(uploadingDocument) ||
+    (currentStep === 1 && !identityComplete) ||
+    (currentStep === 3 && !documentsComplete);
+
+  if (isCheckingSavedDraft) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#F3F4F6] flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-[32px] shadow-2xl border border-navy/5 p-8 text-center">
+          <div className="w-16 h-16 mx-auto bg-cyan/10 rounded-3xl flex items-center justify-center text-cyan mb-6">
+            <Activity size={30} />
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-cyan mb-3">Checking Status</p>
+          <h2 className="text-3xl font-black uppercase tracking-tighter text-navy mb-3">Loading Application</h2>
+          <p className="text-xs font-bold uppercase tracking-widest leading-relaxed text-navy/40">
+            Confirming your latest vendor onboarding status.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (applicationSubmitted) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#F3F4F6] flex items-center justify-center overflow-y-auto p-4 sm:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          className="w-full max-w-2xl bg-white rounded-[32px] shadow-2xl border border-navy/5 overflow-hidden"
+        >
+          <div className="bg-[#0A2647] p-8 sm:p-10 text-white relative">
+            <button
+              onClick={onCancel}
+              className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors uppercase text-[10px] font-black tracking-widest"
+            >
+              Close
+            </button>
+            <div className="w-16 h-16 bg-emerald-500/15 rounded-3xl flex items-center justify-center text-emerald-300 mb-8">
+              <ShieldCheck size={34} />
+            </div>
+            <p className="text-cyan text-[10px] font-black uppercase tracking-[0.35em] mb-4">Application Received</p>
+            <h2 className="text-4xl sm:text-5xl font-black uppercase tracking-tighter leading-none">
+              Under<br />Consideration
+            </h2>
+          </div>
+
+          <div className="p-8 sm:p-10 space-y-8">
+            <div>
+              <h3 className="text-xl font-black text-navy uppercase tracking-tight mb-3">
+                {formData.orgName || 'Your organisation'}
+              </h3>
+              <p className="text-sm font-bold text-navy/50 leading-relaxed">
+                Your vendor application has been submitted successfully. Our compliance team is reviewing your details and documents. We will get back to you soon.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {['Details Sent', 'Documents Received', 'Review In Progress'].map((item) => (
+                <div key={item} className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
+                  <Check size={16} className="text-emerald-500 mb-3" />
+                  <p className="text-[9px] font-black uppercase tracking-widest text-navy/50">{item}</p>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={onCancel}
+              className="w-full bg-navy text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-navy/20"
+            >
+              Done
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#F3F4F6] flex items-start lg:items-center justify-center overflow-y-auto p-3 sm:p-6 lg:p-10">
@@ -247,7 +634,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                           {['Hospital', 'Diagnostic Center', 'Specialty Clinic'].map((type) => (
                             <button
                               key={type}
-                              onClick={() => setFormData({...formData, orgType: type})}
+                              onClick={() => setFormData({...formData, orgType: type as VendorOrgType})}
                               type="button"
                               className={cn(
                                 "py-4 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
@@ -299,24 +686,46 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                        <p className="text-[10px] font-bold text-navy/40 uppercase tracking-widest leading-relaxed">Please submit relevant registration documents for authenticity verification.</p>
                        
                        <div className="grid grid-cols-1 gap-6">
-                          {[
-                            { label: 'Business License / Registration', icon: FileCheck },
-                            { label: 'MOH Accreditation Certificate', icon: ShieldCheck },
-                            { label: 'Tax Identification Document', icon: FileCheck }
-                          ].map((doc, idx) => (
-                            <div key={idx} className="p-5 lg:p-8 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 bg-slate-50/50 group hover:border-cyan/30 transition-all">
+                          {DOCUMENTS.map((doc) => {
+                            const selectedDocument = documents[doc.type];
+                            const isUploading = uploadingDocument === doc.type;
+
+                            return (
+                            <div key={doc.type} className="p-5 lg:p-8 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 bg-slate-50/50 group hover:border-cyan/30 transition-all">
                                <div className="flex items-center gap-6">
                                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-navy shadow-lg group-hover:bg-cyan group-hover:text-white transition-all">
                                    <doc.icon size={20} />
                                  </div>
                                  <div>
                                    <h4 className="text-[10px] font-black uppercase text-navy tracking-widest">{doc.label}</h4>
-                                   <p className="text-[8px] text-navy/40 font-bold uppercase mt-1">Pending Selection</p>
+                                   <p className={cn(
+                                     "text-[8px] font-bold uppercase mt-1",
+                                     selectedDocument ? "text-emerald-600" : "text-navy/40"
+                                   )}>
+                                     {selectedDocument ? selectedDocument.fileName : 'Pending Selection'}
+                                   </p>
                                  </div>
                                </div>
-                               <button className="px-6 py-2 bg-navy text-white rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-brand-red transition-all">Upload</button>
+                               <label className={cn(
+                                 "px-6 py-2 bg-navy text-white rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-brand-red transition-all cursor-pointer text-center",
+                                 isUploading && "opacity-60 pointer-events-none"
+                               )}>
+                                 <input
+                                   type="file"
+                                   className="hidden"
+                                   accept=".pdf,.png,.jpg,.jpeg,.webp"
+                                   disabled={Boolean(uploadingDocument) || isSaving}
+                                   onChange={(event) => {
+                                     const file = event.target.files?.[0];
+                                     void handleDocumentUpload(doc.type, file);
+                                     event.currentTarget.value = '';
+                                   }}
+                                 />
+                                 <CloudUpload size={12} className="mr-2 inline-block" />
+                                 {isUploading ? 'Uploading' : selectedDocument ? 'Replace' : 'Upload'}
+                               </label>
                             </div>
-                          ))}
+                          )})}
                        </div>
                     </div>
                   )}
@@ -328,7 +737,7 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                         {plans.map((p) => (
                           <button
                             key={p.name}
-                            onClick={() => setFormData({...formData, plan: p.name as any})}
+                            onClick={() => setFormData({...formData, plan: p.name})}
                             type="button"
                             className={cn(
                               "relative p-8 rounded-[32px] border-2 text-left transition-all h-full flex flex-col",
@@ -344,8 +753,8 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                              )}
                              <h4 className="text-[10px] font-black uppercase tracking-widest text-navy/40 mb-2">{p.name} PLAN</h4>
                              <div className="flex items-baseline gap-1 mb-8">
-                                <span className="text-3xl font-black text-navy">${p.price}</span>
-                                <span className="text-[8px] font-bold text-navy/40 uppercase">USD / One-time</span>
+                                <span className="text-3xl font-black text-navy">Rs {p.price}</span>
+                                <span className="text-[8px] font-bold text-navy/40 uppercase">INR / One-time</span>
                              </div>
                              
                              <div className="space-y-4 flex-1">
@@ -362,12 +771,12 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
                       
                       <div className="bg-navy rounded-3xl p-6 lg:p-8 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-5">
                          <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-1">Secured Checkout via Stripe</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-1">Secured Checkout via Razorpay</p>
                             <h4 className="text-lg font-black uppercase tracking-tighter">GMAA Institutional Enrollment</h4>
                          </div>
                          <div className="text-right">
                             <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Total Due</p>
-                            <p className="text-2xl font-black">${plans.find(p => p.name === formData.plan)?.price} USD</p>
+                            <p className="text-2xl font-black">Rs {plans.find(p => p.name === formData.plan)?.price} INR</p>
                          </div>
                       </div>
                     </div>
@@ -437,6 +846,11 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
             </div>
 
             {/* Actions */}
+            {errorMessage && (
+              <div className="mt-8 rounded-2xl bg-brand-red/10 px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red">
+                {errorMessage}
+              </div>
+            )}
             <div className="mt-8 lg:mt-16 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6 lg:pt-12 border-t border-slate-100">
                {currentStep < 5 ? (
                  <>
@@ -453,10 +867,10 @@ export default function VendorOnboarding({ onComplete, onCancel }: { onComplete:
 
                    <button 
                      onClick={nextStep}
-                     disabled={currentStep === 1 && !contactNumberIsValid}
+                     disabled={actionDisabled}
                      className="bg-navy text-white px-8 lg:px-12 py-5 rounded-2xl font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-xs hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-navy/20 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                    >
-                     {currentStep === 4 ? 'Commit & Pay' : 'Next Step'} <ChevronRight className="inline-block ml-2 group-hover:translate-x-1 transition-transform" size={18} />
+                     {isSaving ? 'Processing' : currentStep === 4 ? 'Commit & Pay' : 'Next Step'} <ChevronRight className="inline-block ml-2 group-hover:translate-x-1 transition-transform" size={18} />
                    </button>
                  </>
                ) : (
