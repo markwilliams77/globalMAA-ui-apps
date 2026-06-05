@@ -1,18 +1,29 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { AlertCircle, Building2, ChevronLeft, KeyRound, Mail, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Building2, ChevronLeft, KeyRound, ShieldCheck, User } from 'lucide-react';
 
 interface VendorLoginPageProps {
   onBack?: () => void;
+  onLogin?: (username: string, accessKey: string) => void;
 }
 
-const VendorLoginPage: React.FC<VendorLoginPageProps> = ({ onBack }) => {
-  const [email, setEmail] = useState('');
+const VendorLoginPage: React.FC<VendorLoginPageProps> = ({ onBack, onLogin }) => {
+  const [username, setUsername] = useState('');
   const [accessKey, setAccessKey] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!username || !accessKey) {
+      setNotice('Please enter your vendor username and access key.');
+      return;
+    }
+
+    if (onLogin) {
+      onLogin(username.trim(), accessKey.trim());
+      return;
+    }
+
     setNotice('Vendor credential login will be enabled after partner onboarding is connected.');
   };
 
@@ -50,16 +61,16 @@ const VendorLoginPage: React.FC<VendorLoginPageProps> = ({ onBack }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-navy/40 px-5">Vendor Email</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-navy/40 px-5">Vendor Username</label>
             <div className="relative">
-              <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-navy/20" size={16} />
+              <User className="absolute left-6 top-1/2 -translate-y-1/2 text-navy/20" size={16} />
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="partner@clinic.com"
+                placeholder="homelander-eye-136"
                 className="w-full bg-slate-bg border-none rounded-2xl py-4 pl-14 pr-6 text-xs font-bold focus:ring-2 focus:ring-navy/20 transition-all"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
           </div>

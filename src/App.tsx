@@ -81,6 +81,21 @@ export default function App() {
     );
   }
 
+  const handleVendorLogin = (username: string, accessKey: string) => {
+    setSimulationUser({
+      uid: `vendor-${username.replace(/\s+/g, '-').toLowerCase()}`,
+      email: `${username.replace(/\s+/g, '-').toLowerCase()}@vendor.gmaa`,
+      displayName: username,
+      vendorUsername: username,
+      accessKey,
+      createdAt: new Date().toISOString(),
+    });
+    setPortal('vendor');
+    setView('home');
+    setIsLoggingIn(false);
+    setLoginAudience('vendor');
+  };
+
   if (isLoggingIn && loginAudience === 'vendor' && !isVendorUser) {
     return (
       <VendorLoginPage
@@ -89,6 +104,7 @@ export default function App() {
           setPortal('vendor');
           setView('home');
         }}
+        onLogin={handleVendorLogin}
       />
     );
   }
